@@ -1,0 +1,42 @@
+node('master')
+{
+    stage('ContinuousDownload') 
+    {
+        git 'https://github.com/opstree/spring3hibernate.git'
+    }
+    stage('ContnuousBuild')
+    {
+        sh label: '', script: 'mvn package'
+    }
+    stage('JUit reports')
+    {
+        junit 'pro-1/target/surefire-reports/*.xml'
+		junit testDataPublishers: [[$class: 'JUnitFlakyTestDataPublisher']], testResults: 'pro-1/target/surefire-reports/*.xml'
+    }
+    stage('cobertura')
+    {
+        cobertura autoUpdateHealth: false, coberturaReportFile: '**/target/site/cobertura/coverage.xml', conditionalCoverageTargets: '70, 0, 0', failUnhealthy: false, lineCoverageTargets: '80, 0, 0', maxNumberOfBuilds: 0, methodCoverageTargets: '80, 0, 0', onlyStable: false, sourceEncoding: 'ASCII'
+    }
+    stage('FindBugs')
+    {
+        findBuildScans()
+    }
+    stage('checkstyle')
+    {
+        catchError(message: 'YOUR BUILD IS FAILURE .....OOPS') {
+         // some block
+        }
+    }
+    stage('slack noticification')
+    {
+        slackSend channel: 'Shaik Kadhar valli', message: 'Build Started: ${env.JOB_NAME} ${env.BUILD_NUMBER}', username: 'kadhar.valli@opstree.com'
+    }
+    stage('Email noticification')
+    {
+        mail bcc: '', body: 'Tese mails from Jenkins server ', cc: '', from: '', replyTo: '', subject: 'JENKINS_BUILD_STATUS', to: 'kadhar.valli@opstree.com'
+    }
+    stage('Deployment')    
+    {
+        sh label: '', script: 'scp  target/*.war  ubuntu@172.28.31.148:/var/lib/jenkins'
+    }
+} 
